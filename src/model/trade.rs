@@ -15,7 +15,6 @@ use crate::utils::{
     time_utils::{datetime_from_str, datetime_to_str, generate_random_datetime, APP_TZ},
 };
 
-#[derive(Debug)]
 pub struct Trade {
     pub datetime: DateTime<Tz>,
     pub exchange_name: String,
@@ -51,6 +50,20 @@ impl Trade {
             currency_to_price_usd,
             notes,
         }
+    }
+
+    pub fn fees_usd(&self) -> f64 {
+        let expected_volume_to =
+            (self.volume_from * self.currency_from_price_usd) / self.currency_to_price_usd;
+        let diff_volume = expected_volume_to - self.volume_to;
+        diff_volume * self.currency_to_price_usd
+    }
+
+    pub fn fees_percent(&self) -> f64 {
+        let expected_volume_to =
+            (self.volume_from * self.currency_from_price_usd) / self.currency_to_price_usd;
+        let diff_volume = expected_volume_to - self.volume_to;
+        diff_volume * 100.0 / expected_volume_to
     }
 
     pub fn parse(line: &str) -> Self {
@@ -108,6 +121,27 @@ impl fmt::Display for Trade {
             self.currency_to,
             self.currency_to_price_usd,
             self.exchange_name
+        )
+    }
+}
+
+impl fmt::Debug for Trade {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "[{}] {:.9} {} => {:.9} {} ({}={:.9}, {}={:.9}, {}, fees=[{:.9} USD, {:.9}%])",
+            datetime_to_str(&self.datetime),
+            self.volume_from,
+            self.currency_from,
+            self.volume_to,
+            self.currency_to,
+            self.currency_from,
+            self.currency_from_price_usd,
+            self.currency_to,
+            self.currency_to_price_usd,
+            self.exchange_name,
+            self.fees_usd(),
+            self.fees_percent(),
         )
     }
 }
