@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rusty-trades'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rusty-trades",
+                    "--package=rusty-trades"
+                ],
+                "filter": {
+                    "name": "rusty-trades",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'rusty-trades'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=rusty-trades",
+                    "--package=rusty-trades"
+                ],
+                "filter": {
+                    "name": "rusty-trades",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
