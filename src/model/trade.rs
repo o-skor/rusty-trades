@@ -28,30 +28,6 @@ pub struct Trade {
 }
 
 impl Trade {
-    pub fn new(
-        datetime: DateTime<Tz>,
-        exchange_name: String,
-        volume_from: f64,
-        currency_from: Currency,
-        currency_from_price_usd: f64,
-        volume_to: f64,
-        currency_to: Currency,
-        currency_to_price_usd: f64,
-        notes: Vec<String>,
-    ) -> Self {
-        Self {
-            datetime,
-            exchange_name,
-            volume_from,
-            currency_from,
-            currency_from_price_usd,
-            volume_to,
-            currency_to,
-            currency_to_price_usd,
-            notes,
-        }
-    }
-
     pub fn fees_usd(&self) -> f64 {
         let expected_volume_to =
             (self.volume_from * self.currency_from_price_usd) / self.currency_to_price_usd;
@@ -242,19 +218,22 @@ pub fn generate_random_consistent_trades(n: usize) -> Vec<Trade> {
         *volume_to_cur += volume_to;
 
         let datetime = datetimes[i];
-        let exchange_name = *EXCHANGES.choose(&mut rng).unwrap();
+        let exchange_name = (*EXCHANGES.choose(&mut rng).unwrap()).to_owned();
+        let currency_from = currency_from.to_owned();
+        let currency_to = currency_to.to_owned();
+        let notes = Vec::new();
 
-        trades.push(Trade::new(
+        trades.push(Trade {
             datetime,
-            exchange_name.to_owned(),
+            exchange_name,
             volume_from,
-            currency_from.to_owned(),
+            currency_from,
             currency_from_price_usd,
             volume_to,
-            currency_to.to_owned(),
+            currency_to,
             currency_to_price_usd,
-            Vec::new(),
-        ));
+            notes,
+        });
     }
 
     trades
