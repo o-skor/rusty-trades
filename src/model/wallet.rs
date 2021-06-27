@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-use super::{trade::Trade, Currency};
-use crate::utils::time_utils::datetime_to_str;
+use crate::{
+    model::{trade::Trade, usd_trade::UsdTrade, Currency},
+    utils::time_utils::datetime_to_str,
+};
 
 struct HoldingsItem {
     volume: f64,
@@ -12,6 +14,7 @@ struct HoldingsItem {
 #[derive(Default)]
 pub struct Wallet {
     trades: Vec<Trade>,
+    usd_trades: Vec<UsdTrade>,
     holdings: HashMap<Currency, Vec<HoldingsItem>>,
 }
 
@@ -20,6 +23,8 @@ impl Wallet {
         const EPS: f64 = 1e-5;
 
         if trade.currency_from != "USD" {
+            self.usd_trades.push(UsdTrade::from_trade(&trade, false));
+
             let holdings_bucket = self.holdings.get_mut(&trade.currency_from).unwrap();
             let mut volume_to_sell = trade.volume_from;
 
@@ -44,6 +49,8 @@ impl Wallet {
         }
 
         if trade.currency_to != "USD" {
+            self.usd_trades.push(UsdTrade::from_trade(&trade, true));
+
             let holdings_bucket = self
                 .holdings
                 .entry(trade.currency_to.to_owned())
@@ -67,6 +74,13 @@ impl Wallet {
                     println!("--- {}", note);
                 }
             }
+        }
+    }
+
+    pub fn print_usd_trades(&self) {
+        UsdTrade::print_header();
+        for usd_trade in &self.usd_trades {
+            usd_trade.print();
         }
     }
 

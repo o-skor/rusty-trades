@@ -9,10 +9,12 @@ use lazy_static::lazy_static;
 use rand::{seq::SliceRandom, Rng};
 use regex::Regex;
 
-use super::Currency;
-use crate::utils::{
-    read_all_lines,
-    time_utils::{datetime_from_str, datetime_to_str, generate_random_datetime, APP_TZ},
+use crate::{
+    model::Currency,
+    utils::{
+        read_all_lines,
+        time_utils::{datetime_from_str, datetime_to_str, generate_random_datetime, APP_TZ},
+    },
 };
 
 pub struct Trade {
