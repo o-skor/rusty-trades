@@ -1,19 +1,25 @@
 use std::collections::HashMap;
 
 use crate::{
-    model::{trade::Trade, usd_trade::UsdTrade, Currency},
+    model::{
+        sell_trade::SellTrade,
+        trade::Trade,
+        usd_trade::{UsdTrade, BITCOINTAX_INPUT_COLUMNS},
+        Currency,
+    },
     utils::time_utils::datetime_to_str,
 };
 
 struct HoldingsItem {
     volume: f64,
     cost_basis: f64,
-    trades_idx: usize,
+    trade_idx: usize,
 }
 
 #[derive(Default)]
 pub struct Wallet {
     trades: Vec<Trade>,
+    sell_trades: Vec<SellTrade>,
     usd_trades: Vec<UsdTrade>,
     holdings: HashMap<Currency, Vec<HoldingsItem>>,
 }
@@ -23,12 +29,16 @@ impl Wallet {
         const EPS: f64 = 1e-5;
 
         if trade.currency_from != "USD" {
-            self.usd_trades.push(UsdTrade::from_trade(&trade, false));
+            self.usd_trades.push(UsdTrade::new(&trade, false));
 
             let holdings_bucket = self.holdings.get_mut(&trade.currency_from).unwrap();
             let mut volume_to_sell = trade.volume_from;
 
             while volume_to_sell > EPS {
+                let buy_trade_idx = holdings_bucket[0].trade_idx;
+                let buy_trade = &self.trades[buy_trade_idx];
+                assert_eq!(trade.currency_from, buy_trade.currency_to);
+
                 let volume_sold: f64;
                 let cost_basis_sold: f64;
 
@@ -40,16 +50,25 @@ impl Wallet {
                     holdings_bucket[0].cost_basis -= cost_basis_sold;
                 } else {
                     volume_sold = holdings_bucket[0].volume;
-                    // cost_basis_sold = holdings_bucket[0].cost_basis;
+                    cost_basis_sold = holdings_bucket[0].cost_basis;
                     holdings_bucket.remove(0);
                 }
+
+                self.sell_trades.push(SellTrade::new(
+                    volume_sold,
+                    cost_basis_sold,
+                    buy_trade,
+                    &trade,
+                    buy_trade_idx,
+                    self.trades.len(),
+                ));
 
                 volume_to_sell -= volume_sold;
             }
         }
 
         if trade.currency_to != "USD" {
-            self.usd_trades.push(UsdTrade::from_trade(&trade, true));
+            self.usd_trades.push(UsdTrade::new(&trade, true));
 
             let holdings_bucket = self
                 .holdings
@@ -59,7 +78,7 @@ impl Wallet {
             holdings_bucket.push(HoldingsItem {
                 volume: trade.volume_to,
                 cost_basis,
-                trades_idx: self.trades.len(),
+                trade_idx: self.trades.len(),
             });
         }
 
@@ -78,9 +97,30 @@ impl Wallet {
     }
 
     pub fn print_usd_trades(&self) {
-        UsdTrade::print_header();
+        println!("{}", BITCOINTAX_INPUT_COLUMNS);
         for usd_trade in &self.usd_trades {
-            usd_trade.print();
+            println!("{}", usd_trade);
+        }
+    }
+
+    pub fn print_sell_trades(&self, full_info: bool) {
+        for (i, sell_trade) in (&self.sell_trades).iter().enumerate() {
+            println!("{}", sell_trade);
+            if full_info {
+                let st = &self.trades[sell_trade.sell_trade_idx];
+                println!("- SELL: {}", st);
+                for note in &st.notes {
+                    println!("--- {}", note);
+                }
+                let bt = &self.trades[sell_trade.buy_trade_idx];
+                println!("- BUY: {}", bt);
+                for note in &bt.notes {
+                    println!("--- {}", note);
+                }
+                if i + 1 < self.sell_trades.len() {
+                    println!();
+                }
+            }
         }
     }
 
@@ -119,7 +159,7 @@ impl Wallet {
                 info.total_cost_basis / info.total_volume,
             );
             for item in self.holdings.get(&info.currency).unwrap() {
-                let trade = &self.trades[item.trades_idx];
+                let trade = &self.trades[item.trade_idx];
                 println!(
                     "  - {:.9} {} (cost_basis={:.9}, price={:.9}, {})",
                     item.volume,

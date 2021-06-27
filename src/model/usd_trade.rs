@@ -1,12 +1,14 @@
+use std::fmt;
+
 use chrono::DateTime;
 use chrono_tz::Tz;
 
 use crate::model::{trade::Trade, Currency};
 
-const BITCOINTAX_INPUT_COLUMNS: &str = "Date,Action,Source,Symbol,Volume,Price,Currency,Fee";
+pub const BITCOINTAX_INPUT_COLUMNS: &str = "Date,Action,Source,Symbol,Volume,Price,Currency,Fee";
 const BITCOINTAX_TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S %z";
 
-/// SELL/BUY USD trade used as input for bitcoin.tax platform.
+/// USD trade used as input for bitcoin.tax platform.
 /// This approach treats crypto-to-crypto trades as pairs of crypto-USD and USD-crypto ones.
 /// TODO: investigate further how precise it is when exchanges take fees in coins but not in USD.
 pub struct UsdTrade {
@@ -20,7 +22,7 @@ pub struct UsdTrade {
 }
 
 impl UsdTrade {
-    pub fn from_trade(trade: &Trade, is_buy: bool) -> Self {
+    pub fn new(trade: &Trade, is_buy: bool) -> Self {
         let datetime = trade.datetime.clone();
         let exchange_name = trade.exchange_name.clone();
         let currency;
@@ -55,15 +57,15 @@ impl UsdTrade {
             fees_usd,
         }
     }
+}
 
-    pub fn print_header() {
-        println!("{}", BITCOINTAX_INPUT_COLUMNS);
-    }
-
-    pub fn print(&self) {
+/// Display information as per bitcoin.tax input format.
+impl fmt::Display for UsdTrade {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let dt = self.datetime.format(BITCOINTAX_TIME_FORMAT);
         let action = if self.is_buy { "BUY" } else { "SELL" };
-        println!(
+        write!(
+            f,
             "{},{},{},{},{:.9},{:.9},USD,{:.9}",
             dt,
             action,
@@ -72,6 +74,6 @@ impl UsdTrade {
             self.volume,
             self.price_usd,
             self.fees_usd,
-        );
+        )
     }
 }
