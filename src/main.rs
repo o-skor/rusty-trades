@@ -15,4 +15,5 @@ fn main() {
     wallet.print_usd_trades();
     wallet.print_sell_trades(false);
     wallet.print_holdings();
+    wallet.print_proceeds();
 }

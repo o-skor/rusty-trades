@@ -10,14 +10,14 @@ use crate::{
 
 /// Sell trade information for Form 8949.
 pub struct SellTrade {
-    volume: f64,
-    currency: Currency,
-    cost_basis: f64, // volume * price_bought_usd + fees
-    proceeds: f64,   // volume * price_sold_usd - fees (0 if crypto-to-crypto)
-    buy_datetime: DateTime<Tz>,
-    sell_datetime: DateTime<Tz>,
+    pub volume: f64,
+    pub currency: Currency,
+    pub cost_basis: f64, // volume * price_bought_usd + fees
+    pub proceeds: f64,   // volume * price_sold_usd - fees (0 if crypto-to-crypto)
     pub buy_trade_idx: usize,
     pub sell_trade_idx: usize,
+    buy_datetime: DateTime<Tz>,
+    sell_datetime: DateTime<Tz>,
 }
 
 impl SellTrade {
@@ -43,10 +43,10 @@ impl SellTrade {
             currency,
             cost_basis,
             proceeds,
-            buy_datetime,
-            sell_datetime,
             buy_trade_idx,
             sell_trade_idx,
+            buy_datetime,
+            sell_datetime,
         }
     }
 

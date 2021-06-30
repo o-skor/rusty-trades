@@ -171,4 +171,64 @@ impl Wallet {
             }
         }
     }
+
+    pub fn print_proceeds(&self) {
+        #[derive(Default)]
+        struct ProceedsInfo {
+            volume: f64,
+            proceeds: f64,
+            cost_basis: f64,
+            gain: f64,
+        }
+        let mut proceeds_lt = HashMap::<Currency, ProceedsInfo>::new();
+        let mut proceeds_st = HashMap::<Currency, ProceedsInfo>::new();
+        for st in &self.sell_trades {
+            let infos = if st.is_long_term() {
+                &mut proceeds_lt
+            } else {
+                &mut proceeds_st
+            };
+            let entry = infos
+                .entry(st.currency.clone())
+                .or_insert(ProceedsInfo::default());
+            entry.volume += st.volume;
+            entry.proceeds += st.proceeds;
+            entry.cost_basis += st.cost_basis;
+            entry.gain += st.gain();
+        }
+
+        for i in 0..2 {
+            let (proceeds, label) = if i == 0 {
+                (&proceeds_lt, "LONG")
+            } else {
+                (&proceeds_st, "SHORT")
+            };
+            let mut totals = ProceedsInfo::default();
+            let mut currencies = vec![];
+            for (currency, info) in proceeds {
+                currencies.push(currency);
+                totals.volume += info.volume;
+                totals.proceeds += info.proceeds;
+                totals.cost_basis += info.cost_basis;
+                totals.gain += info.gain;
+            }
+            currencies.sort();
+
+            if i > 0 {
+                println!();
+            }
+            println!("Target period {}-TERM gains:", label);
+            for currency in currencies {
+                let info = proceeds.get(currency).unwrap();
+                println!(
+                    "- {}: volume={:.9} proceeds={:.9} cost_basis={:.9} gains={:.9}",
+                    currency, info.volume, info.proceeds, info.cost_basis, info.gain
+                );
+            }
+            println!(
+                "total_volume={:.9} total_proceeds={:.9} total_cost_basis={:.9} total_gains={:.9}",
+                totals.volume, totals.proceeds, totals.cost_basis, totals.gain
+            );
+        }
+    }
 }
