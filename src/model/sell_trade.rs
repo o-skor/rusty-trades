@@ -1,6 +1,6 @@
 use std::fmt;
 
-use chrono::{DateTime, Datelike, TimeZone};
+use chrono::{DateTime, Datelike, Duration, TimeZone};
 use chrono_tz::Tz;
 
 use crate::{
@@ -50,23 +50,23 @@ impl SellTrade {
         }
     }
 
-    // TODO: Fix for leap years.
     pub fn is_long_term(&self) -> bool {
-        let t1 = APP_TZ
-            .ymd(
-                self.sell_datetime.year() - 1,
-                self.sell_datetime.month(),
-                self.sell_datetime.day(),
-            )
-            .and_hms(0, 0, 0);
-        let t0 = APP_TZ
+        let mut dt = APP_TZ
             .ymd(
                 self.buy_datetime.year(),
                 self.buy_datetime.month(),
                 self.buy_datetime.day(),
             )
+            .and_hms(0, 0, 0)
+            + Duration::days(1);
+        if dt.month() == 2 && dt.day() == 29 {
+            // leap_year/02/29 is a special case.
+            dt = dt + Duration::days(1);
+        }
+        let dt_can_sell_lt = APP_TZ
+            .ymd(dt.year() + 1, dt.month(), dt.day())
             .and_hms(0, 0, 0);
-        t1 > t0
+        self.sell_datetime >= dt_can_sell_lt
     }
 
     pub fn gain(&self) -> f64 {
