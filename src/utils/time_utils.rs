@@ -30,3 +30,12 @@ pub fn datetime_from_str(s: &str) -> Result<DateTime<Tz>, chrono::ParseError> {
 pub fn datetime_to_str(dt: &DateTime<Tz>) -> String {
     dt.format(APP_TIME_FORMAT).to_string()
 }
+
+pub fn datetime_within_limits(
+    dt: &DateTime<Tz>,
+    dt_from: &DateTime<Tz>,
+    dt_to: &DateTime<Tz>,
+) -> bool {
+    assert!(dt_from < dt_to);
+    dt >= dt_from && dt < dt_to
+}

@@ -17,7 +17,7 @@ pub struct SellTrade {
     pub buy_trade_idx: usize,
     pub sell_trade_idx: usize,
     buy_datetime: DateTime<Tz>,
-    sell_datetime: DateTime<Tz>,
+    pub sell_datetime: DateTime<Tz>,
 }
 
 impl SellTrade {
@@ -50,6 +50,7 @@ impl SellTrade {
         }
     }
 
+    // TODO: Fix for leap years.
     pub fn is_long_term(&self) -> bool {
         let t1 = APP_TZ
             .ymd(

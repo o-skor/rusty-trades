@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+use chrono::DateTime;
+use chrono_tz::Tz;
+
 use crate::{
     model::{
         sell_trade::SellTrade,
@@ -7,7 +10,7 @@ use crate::{
         usd_trade::{UsdTrade, BITCOINTAX_INPUT_COLUMNS},
         Currency,
     },
-    utils::time_utils::datetime_to_str,
+    utils::time_utils::{datetime_to_str, datetime_within_limits},
 };
 
 struct HoldingsItem {
@@ -85,8 +88,11 @@ impl Wallet {
         self.trades.push(trade);
     }
 
-    pub fn print_trades(&self, print_notes: bool) {
+    pub fn print_trades(&self, print_notes: bool, dt_from: &DateTime<Tz>, dt_to: &DateTime<Tz>) {
         for trade in &self.trades {
+            if !datetime_within_limits(&trade.datetime, dt_from, dt_to) {
+                continue;
+            }
             println!("{}", trade);
             if print_notes {
                 for note in &trade.notes {
@@ -96,15 +102,21 @@ impl Wallet {
         }
     }
 
-    pub fn print_usd_trades(&self) {
+    pub fn print_usd_trades(&self, dt_from: &DateTime<Tz>, dt_to: &DateTime<Tz>) {
         println!("{}", BITCOINTAX_INPUT_COLUMNS);
         for usd_trade in &self.usd_trades {
+            if !datetime_within_limits(&usd_trade.datetime, dt_from, dt_to) {
+                continue;
+            }
             println!("{}", usd_trade);
         }
     }
 
-    pub fn print_sell_trades(&self, full_info: bool) {
+    pub fn print_sell_trades(&self, full_info: bool, dt_from: &DateTime<Tz>, dt_to: &DateTime<Tz>) {
         for (i, sell_trade) in (&self.sell_trades).iter().enumerate() {
+            if !datetime_within_limits(&sell_trade.sell_datetime, dt_from, dt_to) {
+                continue;
+            }
             println!("{}", sell_trade);
             if full_info {
                 let st = &self.trades[sell_trade.sell_trade_idx];
@@ -121,6 +133,70 @@ impl Wallet {
                     println!();
                 }
             }
+        }
+    }
+
+    pub fn print_proceeds(&self, dt_from: &DateTime<Tz>, dt_to: &DateTime<Tz>) {
+        #[derive(Default)]
+        struct ProceedsInfo {
+            volume: f64,
+            proceeds: f64,
+            cost_basis: f64,
+            gain: f64,
+        }
+        let mut proceeds_lt = HashMap::<Currency, ProceedsInfo>::new();
+        let mut proceeds_st = HashMap::<Currency, ProceedsInfo>::new();
+
+        for st in &self.sell_trades {
+            if !datetime_within_limits(&st.sell_datetime, dt_from, dt_to) {
+                continue;
+            }
+            let infos = if st.is_long_term() {
+                &mut proceeds_lt
+            } else {
+                &mut proceeds_st
+            };
+            let entry = infos
+                .entry(st.currency.clone())
+                .or_insert(ProceedsInfo::default());
+            entry.volume += st.volume;
+            entry.proceeds += st.proceeds;
+            entry.cost_basis += st.cost_basis;
+            entry.gain += st.gain();
+        }
+
+        for &is_lt in &[true, false] {
+            let (proceeds, label) = if is_lt {
+                (&proceeds_lt, "LONG")
+            } else {
+                (&proceeds_st, "SHORT")
+            };
+            let mut totals = ProceedsInfo::default();
+            let mut currencies = vec![];
+            for (currency, info) in proceeds {
+                currencies.push(currency);
+                totals.volume += info.volume;
+                totals.proceeds += info.proceeds;
+                totals.cost_basis += info.cost_basis;
+                totals.gain += info.gain;
+            }
+            currencies.sort();
+
+            if !is_lt {
+                println!();
+            }
+            println!("Target period {}-TERM gains:", label);
+            for currency in currencies {
+                let info = proceeds.get(currency).unwrap();
+                println!(
+                    "- {}: volume={:.9} proceeds={:.9} cost_basis={:.9} gains={:.9}",
+                    currency, info.volume, info.proceeds, info.cost_basis, info.gain
+                );
+            }
+            println!(
+                "total_volume={:.9} total_proceeds={:.9} total_cost_basis={:.9} total_gains={:.9}",
+                totals.volume, totals.proceeds, totals.cost_basis, totals.gain
+            );
         }
     }
 
@@ -169,66 +245,6 @@ impl Wallet {
                     datetime_to_str(&trade.datetime),
                 );
             }
-        }
-    }
-
-    pub fn print_proceeds(&self) {
-        #[derive(Default)]
-        struct ProceedsInfo {
-            volume: f64,
-            proceeds: f64,
-            cost_basis: f64,
-            gain: f64,
-        }
-        let mut proceeds_lt = HashMap::<Currency, ProceedsInfo>::new();
-        let mut proceeds_st = HashMap::<Currency, ProceedsInfo>::new();
-        for st in &self.sell_trades {
-            let infos = if st.is_long_term() {
-                &mut proceeds_lt
-            } else {
-                &mut proceeds_st
-            };
-            let entry = infos
-                .entry(st.currency.clone())
-                .or_insert(ProceedsInfo::default());
-            entry.volume += st.volume;
-            entry.proceeds += st.proceeds;
-            entry.cost_basis += st.cost_basis;
-            entry.gain += st.gain();
-        }
-
-        for i in 0..2 {
-            let (proceeds, label) = if i == 0 {
-                (&proceeds_lt, "LONG")
-            } else {
-                (&proceeds_st, "SHORT")
-            };
-            let mut totals = ProceedsInfo::default();
-            let mut currencies = vec![];
-            for (currency, info) in proceeds {
-                currencies.push(currency);
-                totals.volume += info.volume;
-                totals.proceeds += info.proceeds;
-                totals.cost_basis += info.cost_basis;
-                totals.gain += info.gain;
-            }
-            currencies.sort();
-
-            if i > 0 {
-                println!();
-            }
-            println!("Target period {}-TERM gains:", label);
-            for currency in currencies {
-                let info = proceeds.get(currency).unwrap();
-                println!(
-                    "- {}: volume={:.9} proceeds={:.9} cost_basis={:.9} gains={:.9}",
-                    currency, info.volume, info.proceeds, info.cost_basis, info.gain
-                );
-            }
-            println!(
-                "total_volume={:.9} total_proceeds={:.9} total_cost_basis={:.9} total_gains={:.9}",
-                totals.volume, totals.proceeds, totals.cost_basis, totals.gain
-            );
         }
     }
 }

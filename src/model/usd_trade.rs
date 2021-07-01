@@ -12,7 +12,7 @@ const BITCOINTAX_TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S %z";
 /// This approach treats crypto-to-crypto trades as pairs of crypto-USD and USD-crypto ones.
 /// TODO: investigate further how precise it is when exchanges take fees in coins but not in USD.
 pub struct UsdTrade {
-    datetime: DateTime<Tz>,
+    pub datetime: DateTime<Tz>,
     is_buy: bool,
     exchange_name: String,
     currency: Currency,
