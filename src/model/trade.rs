@@ -3,7 +3,7 @@ use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 
-use chrono::{DateTime, TimeZone};
+use chrono::DateTime;
 use chrono_tz::Tz;
 use lazy_static::lazy_static;
 use rand::{seq::SliceRandom, Rng};
@@ -13,7 +13,7 @@ use crate::{
     model::Currency,
     utils::{
         read_all_lines,
-        time_utils::{datetime_from_str, datetime_to_str, generate_random_datetime, APP_TZ},
+        time_utils::{datetime_from_str, datetime_to_str, generate_random_datetime},
     },
 };
 
@@ -145,14 +145,15 @@ pub fn load_trades() -> Vec<Trade> {
 }
 
 #[allow(dead_code)]
-pub fn generate_random_consistent_trades(n: usize) -> Vec<Trade> {
+pub fn generate_random_consistent_trades(
+    n: usize,
+    dt_from: &DateTime<Tz>,
+    dt_to: &DateTime<Tz>,
+) -> Vec<Trade> {
     let mut rng = rand::thread_rng();
 
-    let dt_from = APP_TZ.ymd(2019, 1, 1).and_hms(0, 0, 0);
-    let dt_to = APP_TZ.ymd(2020, 12, 31).and_hms(23, 59, 59);
-
     let mut datetimes: Vec<DateTime<Tz>> = (0..n)
-        .map(|_| generate_random_datetime(&dt_from, &dt_to, &mut rng))
+        .map(|_| generate_random_datetime(dt_from, dt_to, &mut rng))
         .collect();
     datetimes.sort();
 
