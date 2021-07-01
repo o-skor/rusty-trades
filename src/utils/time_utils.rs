@@ -31,11 +31,22 @@ pub fn datetime_to_str(dt: &DateTime<Tz>) -> String {
     dt.format(APP_TIME_FORMAT).to_string()
 }
 
-pub fn datetime_within_limits(
+pub fn is_datetime_within_limits(
     dt: &DateTime<Tz>,
     dt_from: &DateTime<Tz>,
     dt_to: &DateTime<Tz>,
 ) -> bool {
     assert!(dt_from < dt_to);
     dt >= dt_from && dt < dt_to
+}
+
+/// Time bounds as per US quarterly estimated tax due dates.
+pub fn datetime_bounds_for_quarters(year: i32) -> [DateTime<Tz>; 5] {
+    [
+        APP_TZ.ymd(year, 1, 1).and_hms(0, 0, 0),
+        APP_TZ.ymd(year, 4, 1).and_hms(0, 0, 0),
+        APP_TZ.ymd(year, 6, 1).and_hms(0, 0, 0),
+        APP_TZ.ymd(year, 9, 1).and_hms(0, 0, 0),
+        APP_TZ.ymd(year + 1, 1, 1).and_hms(0, 0, 0),
+    ]
 }

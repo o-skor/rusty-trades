@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::DateTime;
+use chrono::{DateTime, Datelike};
 use chrono_tz::Tz;
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
         usd_trade::{UsdTrade, BITCOINTAX_INPUT_COLUMNS},
         Currency,
     },
-    utils::time_utils::{datetime_to_str, datetime_within_limits},
+    utils::time_utils::{datetime_bounds_for_quarters, datetime_to_str, is_datetime_within_limits},
 };
 
 struct HoldingsItem {
@@ -90,7 +90,7 @@ impl Wallet {
 
     pub fn print_trades(&self, print_notes: bool, dt_from: &DateTime<Tz>, dt_to: &DateTime<Tz>) {
         for trade in &self.trades {
-            if !datetime_within_limits(&trade.datetime, dt_from, dt_to) {
+            if !is_datetime_within_limits(&trade.datetime, dt_from, dt_to) {
                 continue;
             }
             println!("{}", trade);
@@ -105,7 +105,7 @@ impl Wallet {
     pub fn print_usd_trades(&self, dt_from: &DateTime<Tz>, dt_to: &DateTime<Tz>) {
         println!("{}", BITCOINTAX_INPUT_COLUMNS);
         for usd_trade in &self.usd_trades {
-            if !datetime_within_limits(&usd_trade.datetime, dt_from, dt_to) {
+            if !is_datetime_within_limits(&usd_trade.datetime, dt_from, dt_to) {
                 continue;
             }
             println!("{}", usd_trade);
@@ -114,7 +114,7 @@ impl Wallet {
 
     pub fn print_sell_trades(&self, full_info: bool, dt_from: &DateTime<Tz>, dt_to: &DateTime<Tz>) {
         for (i, sell_trade) in (&self.sell_trades).iter().enumerate() {
-            if !datetime_within_limits(&sell_trade.sell_datetime, dt_from, dt_to) {
+            if !is_datetime_within_limits(&sell_trade.sell_datetime, dt_from, dt_to) {
                 continue;
             }
             println!("{}", sell_trade);
@@ -137,6 +137,35 @@ impl Wallet {
     }
 
     pub fn print_proceeds(&self, dt_from: &DateTime<Tz>, dt_to: &DateTime<Tz>) {
+        self.print_proceeds_for_period(dt_from, dt_to, "Target period");
+
+        for year in dt_from.year()..=dt_to.year() {
+            println!();
+            let dt_bounds = datetime_bounds_for_quarters(year);
+            let mut period_printed = false;
+
+            for quarter in 0..dt_bounds.len() - 1 {
+                let dt_l = std::cmp::max(dt_from, &dt_bounds[quarter]);
+                let dt_r = std::cmp::min(dt_to, &dt_bounds[quarter + 1]);
+                if dt_r < dt_l {
+                    continue;
+                }
+                if period_printed {
+                    println!();
+                }
+                let period_name = format!("{} Q{}", year, quarter + 1);
+                self.print_proceeds_for_period(dt_l, dt_r, &period_name);
+                period_printed = true;
+            }
+        }
+    }
+
+    fn print_proceeds_for_period(
+        &self,
+        dt_from: &DateTime<Tz>,
+        dt_to: &DateTime<Tz>,
+        period_name: &str,
+    ) {
         #[derive(Default)]
         struct ProceedsInfo {
             volume: f64,
@@ -148,7 +177,7 @@ impl Wallet {
         let mut proceeds_st = HashMap::<Currency, ProceedsInfo>::new();
 
         for st in &self.sell_trades {
-            if !datetime_within_limits(&st.sell_datetime, dt_from, dt_to) {
+            if !is_datetime_within_limits(&st.sell_datetime, dt_from, dt_to) {
                 continue;
             }
             let infos = if st.is_long_term() {
@@ -185,7 +214,7 @@ impl Wallet {
             if !is_lt {
                 println!();
             }
-            println!("Target period {}-TERM gains:", label);
+            println!("{} {}-TERM gains:", period_name, label);
             for currency in currencies {
                 let info = proceeds.get(currency).unwrap();
                 println!(
