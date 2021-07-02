@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Datelike};
+use chrono::{DateTime, Datelike, TimeZone};
 use chrono_tz::Tz;
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
         usd_trade::{UsdTrade, BITCOINTAX_INPUT_COLUMNS},
         Currency,
     },
-    utils::time_utils::{datetime_bounds_for_quarters, datetime_to_str, is_datetime_within_limits},
+    utils::time_utils::{datetime_to_str, is_datetime_within_limits, APP_TZ},
 };
 
 struct HoldingsItem {
@@ -140,22 +140,24 @@ impl Wallet {
         self.print_proceeds_for_period(dt_from, dt_to, "Target period");
 
         for year in dt_from.year()..=dt_to.year() {
-            println!();
-            let dt_bounds = datetime_bounds_for_quarters(year);
-            let mut period_printed = false;
-
+            // Time bounds as per US quarterly estimated tax due dates.
+            let dt_bounds = [
+                APP_TZ.ymd(year, 1, 1).and_hms(0, 0, 0),
+                APP_TZ.ymd(year, 4, 1).and_hms(0, 0, 0),
+                APP_TZ.ymd(year, 6, 1).and_hms(0, 0, 0),
+                APP_TZ.ymd(year, 9, 1).and_hms(0, 0, 0),
+                APP_TZ.ymd(year + 1, 1, 1).and_hms(0, 0, 0),
+            ];
             for quarter in 0..dt_bounds.len() - 1 {
                 let dt_l = std::cmp::max(dt_from, &dt_bounds[quarter]);
                 let dt_r = std::cmp::min(dt_to, &dt_bounds[quarter + 1]);
                 if dt_r < dt_l {
                     continue;
                 }
-                if period_printed {
-                    println!();
-                }
+                println!();
+
                 let period_name = format!("{} Q{}", year, quarter + 1);
                 self.print_proceeds_for_period(dt_l, dt_r, &period_name);
-                period_printed = true;
             }
         }
     }
@@ -209,7 +211,12 @@ impl Wallet {
                 totals.cost_basis += info.cost_basis;
                 totals.gain += info.gain;
             }
-            currencies.sort();
+
+            currencies.sort_by(|c_1, c_2| {
+                let info_1 = proceeds.get(*c_1).unwrap();
+                let info_2 = proceeds.get(*c_2).unwrap();
+                info_2.proceeds.partial_cmp(&info_1.proceeds).unwrap()
+            });
 
             if !is_lt {
                 println!();

@@ -39,14 +39,3 @@ pub fn is_datetime_within_limits(
     assert!(dt_from < dt_to);
     dt >= dt_from && dt < dt_to
 }
-
-/// Time bounds as per US quarterly estimated tax due dates.
-pub fn datetime_bounds_for_quarters(year: i32) -> [DateTime<Tz>; 5] {
-    [
-        APP_TZ.ymd(year, 1, 1).and_hms(0, 0, 0),
-        APP_TZ.ymd(year, 4, 1).and_hms(0, 0, 0),
-        APP_TZ.ymd(year, 6, 1).and_hms(0, 0, 0),
-        APP_TZ.ymd(year, 9, 1).and_hms(0, 0, 0),
-        APP_TZ.ymd(year + 1, 1, 1).and_hms(0, 0, 0),
-    ]
-}
