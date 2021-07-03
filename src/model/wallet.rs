@@ -21,7 +21,7 @@ struct HoldingsItem {
 
 #[derive(Default)]
 pub struct Wallet {
-    trades: Vec<Trade>,
+    pub trades: Vec<Trade>,
     sell_trades: Vec<SellTrade>,
     usd_trades: Vec<UsdTrade>,
     holdings: HashMap<Currency, Vec<HoldingsItem>>,
@@ -29,6 +29,12 @@ pub struct Wallet {
 
 impl Wallet {
     pub fn add_trade(&mut self, trade: Trade) {
+        if !self.trades.is_empty() {
+            assert!(
+                self.trades.last().unwrap().datetime <= trade.datetime,
+                "Add trades in chronological order"
+            );
+        }
         const EPS: f64 = 1e-5;
 
         if trade.currency_from != "USD" {

@@ -1,4 +1,4 @@
-use chrono::{DateTime, TimeZone};
+use chrono::{DateTime, Datelike, TimeZone};
 use chrono_tz::Tz;
 
 use rand::Rng;
@@ -38,4 +38,16 @@ pub fn is_datetime_within_limits(
 ) -> bool {
     assert!(dt_from < dt_to);
     dt >= dt_from && dt < dt_to
+}
+
+pub fn start_of_the_day(dt: &DateTime<Tz>) -> DateTime<Tz> {
+    APP_TZ
+        .ymd(dt.year(), dt.month(), dt.day())
+        .and_hms_milli(0, 0, 0, 0)
+}
+
+pub fn end_of_the_day(dt: &DateTime<Tz>) -> DateTime<Tz> {
+    APP_TZ
+        .ymd(dt.year(), dt.month(), dt.day())
+        .and_hms_milli(23, 59, 59, 999)
 }

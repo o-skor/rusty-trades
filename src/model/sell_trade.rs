@@ -1,11 +1,11 @@
 use std::fmt;
 
-use chrono::{DateTime, Datelike, Duration, TimeZone};
+use chrono::{DateTime, Datelike, Duration};
 use chrono_tz::Tz;
 
 use crate::{
     model::{trade::Trade, Currency},
-    utils::time_utils::{datetime_to_str, APP_TZ},
+    utils::time_utils::{datetime_to_str, start_of_the_day},
 };
 
 /// Sell trade information for Form 8949.
@@ -51,21 +51,12 @@ impl SellTrade {
     }
 
     pub fn is_long_term(&self) -> bool {
-        let mut dt = APP_TZ
-            .ymd(
-                self.buy_datetime.year(),
-                self.buy_datetime.month(),
-                self.buy_datetime.day(),
-            )
-            .and_hms(0, 0, 0)
-            + Duration::days(1);
+        let mut dt = start_of_the_day(&self.buy_datetime) + Duration::days(1);
         if dt.month() == 2 && dt.day() == 29 {
             // leap_year/02/29 is a special case.
             dt = dt + Duration::days(1);
         }
-        let dt_can_sell_lt = APP_TZ
-            .ymd(dt.year() + 1, dt.month(), dt.day())
-            .and_hms(0, 0, 0);
+        let dt_can_sell_lt = dt.with_year(dt.year() + 1).unwrap();
         self.sell_datetime >= dt_can_sell_lt
     }
 

@@ -124,8 +124,8 @@ impl fmt::Debug for Trade {
     }
 }
 
-pub fn load_trades() -> Vec<Trade> {
-    let reader = BufReader::new(File::open("in.txt").unwrap());
+pub fn load_trades(filename: &str) -> Vec<Trade> {
+    let reader = BufReader::new(File::open(filename).unwrap());
     let lines = read_all_lines(reader).unwrap();
     let mut trades = vec![];
 

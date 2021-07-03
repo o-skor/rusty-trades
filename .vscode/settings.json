@@ -1,0 +1,5 @@
+{
+    "code-runner.executorMap": {
+        "rust": "RUST_BACKTRACE=1 cargo run # $fileName",
+    },
+}
